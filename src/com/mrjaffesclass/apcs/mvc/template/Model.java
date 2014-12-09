@@ -1,6 +1,8 @@
 package com.mrjaffesclass.apcs.mvc.template;
 
 import com.mrjaffesclass.apcs.messenger.*;
+import java.util.Arrays;
+import java.util.Random;
 
 /**
  * The model represents the data that the app uses.
@@ -13,8 +15,10 @@ public class Model implements MessageHandler {
   private final Messenger mvcMessaging;
 
   // Model's data variables
-  private int variable1;
-  private int variable2;
+  private int gridSize;
+  private int numMines;
+  private boolean[][] mineGrid;
+  
 
   /**
    * Model constructor: Create the data representation of the program
@@ -28,11 +32,40 @@ public class Model implements MessageHandler {
   /**
    * Initialize the model here and subscribe to any required messages
    */
-  public void init() {
+  public void init() {  //model gets the information from the controller 
     mvcMessaging.subscribe("view:changeButton", this);
-    setVariable1(10);
-    setVariable2(-10);
+    mvcMessaging.subscribe("view:newGameClicked", this);
+    mvcMessaging.subscribe("view:gameButtonClick", this);
+  
+    setGridSize(8);//sets grid size
+    setNumMines(10); //sets the mines
+    randomizeMines(getNumMines()); 
   }
+  
+  public void randomizeMines(int number) {
+    mineGrid = new boolean[getGridSize()][getGridSize()]; //gets the grid from the view to set the landmines
+    for (int i=0; i<getGridSize(); i++)
+    {
+        for (int j=0; j<getGridSize(); j++)
+        {
+            mineGrid[i][j] = false;
+        }
+    }
+    //Arrays.fill(mineGrid,Boolean.FALSE);
+    Random randomGenerator = new Random(); //places the mines randomly into the arrays
+    for (int idx = 1; idx <= number; ++idx){
+        int x = randomGenerator.nextInt(getGridSize());
+        int y = randomGenerator.nextInt(getGridSize());
+        mineGrid[x][y] = Boolean.TRUE;
+    }
+    mvcMessaging.notify("model:StartGame", gridSize, true);
+    
+  }
+  
+  
+  
+   //uses booleans to see iof there is a mine or not, if there is a mine it will come up true 
+  //from the for loop above when it sets the random mines, uses booleans and calls mines "true"
   
   @Override
   public void messageHandler(String messageName, Object messagePayload) {
@@ -41,63 +74,79 @@ public class Model implements MessageHandler {
     } else {
       System.out.println("MSG: received by model: "+messageName+" | No data sent");
     }
-    MessagePayload payload = (MessagePayload)messagePayload;
-    int field = payload.getField();
-    int direction = payload.getDirection();
     
-    if (direction == Constants.UP) {
-      if (field == 1) {
-        setVariable1(getVariable1()+Constants.FIELD_1_INCREMENT);
-      } else {
-        setVariable2(getVariable2()+Constants.FIELD_2_INCREMENT);
-      }
-    } else {
-      if (field == 1) {
-        setVariable1(getVariable1()-Constants.FIELD_1_INCREMENT);
-      } else {
-        setVariable2(getVariable2()-Constants.FIELD_2_INCREMENT);
-      }      
+    if (messageName == "view:gameButtonClick") {
+        MessagePayload payload = (MessagePayload)messagePayload;
+        int pCol = payload.getField();
+        int pRow = payload.getDirection();
+        if (mineGrid[pCol][pRow] == true) {
+            //hit a bomb
+            mvcMessaging.notify("model:hitABomb", new MessagePayload(pCol, pRow), true);
+        }
+        else {
+            //hit a safe spot
+            mvcMessaging.notify("model:hitASafeSpot", new MessagePayload(pCol, pRow), true);
+        }
     }
-  }
+    else if ("view:newGameClicked".equals(messageName)) {
+        randomizeMines(getNumMines());
+    } 
+   
+     
+    
+    }
+        
+  
+    
+  
 
   /**
    * Getter function for variable 1
-   * @return Value of variable1
+   * @return Value of gridSize
    */
-  public int getVariable1() {
-    return variable1;
+  public int getGridSize() {
+    return gridSize;
   }
 
   /**
    * Setter function for variable 1
-   * @param v New value of variable1
+   * @param v New value of gridSize
    */
-  public void setVariable1(int v) {
-    variable1 = v;
+  public void setGridSize(int v) {
+    gridSize = v;
     // When we set a new value to variable 1 we need to also send a
     // message to let other modules know that the variable value
     // was changed
-    mvcMessaging.notify("model:variable1Changed", variable1, true);
+    mvcMessaging.notify("model:gridSizeChanged", gridSize, true);
   }
   
   /**
    * Getter function for variable 1
-   * @return Value of variable2
+   * @return Value of numMines
    */
-  public int getVariable2() {
-    return variable2;
+  public int getNumMines() {
+    return numMines;
   }
   
   /**
    * Setter function for variable 2
    * @param v New value of variable 2
    */
-  public void setVariable2(int v) {
-    variable2 = v;
+  public void setNumMines(int v) {
+    numMines = v;
     // When we set a new value to variable 2 we need to also send a
     // message to let other modules know that the variable value
     // was changed
-    mvcMessaging.notify("model:variable2Changed", variable2, true);
+    mvcMessaging.notify("model:numMinesChanged", numMines, true);
+  }  
+
+    private void appear(boolean b) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+  
+  
+      
+  
   }
 
-}
+
